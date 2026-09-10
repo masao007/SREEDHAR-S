@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Function to check if the user is owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if false; // Deletion handled via admin or soft-delete
+    }
+
+    // JOBS COLLECTION
+    match /jobs/{jobId} {
+      allow read: if true; // Public job discovery
+      allow create: if isAuthenticated() && request.resource.data.employer_id == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.employer_id == request.auth.uid || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+      allow delete: if isAuthenticated() && resource.data.employer_id == request.auth.uid;
+    }
+
+    // APPLICATIONS COLLECTION
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.worker_id == request.auth.uid || 
+        resource.data.employer_id == request.auth.uid
+      );
+      allow create: if isAuthenticated() && request.resource.data.worker_id == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.worker_id == request.auth.uid || 
+        resource.data.employer_id == request.auth.uid
+      );
+    }
+
+    // EARNINGS COLLECTION
+    match /earnings/{earningId} {
+      allow read: if isAuthenticated() && resource.data.worker_id == request.auth.uid;
+      allow write: if false; // Only server Cloud Functions / admin writes earnings
+    }
+
+    // NOTIFICATIONS COLLECTION
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.user_id == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_read']);
+      allow create: if isAuthenticated();
+    }
+  }
+}

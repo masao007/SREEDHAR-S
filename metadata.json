@@ -1,0 +1,6 @@
+{
+  "name": "Money Maker",
+  "description": "Find nearby part-time and work opportunities in India with real-time AI matching, interactive map discovery, earnings tracking, and instant payouts.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
